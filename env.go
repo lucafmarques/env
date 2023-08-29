@@ -17,10 +17,13 @@ func Get[T constraint](key string, fallback ...T) (value T, ok bool) {
 	)
 
 	env := os.Getenv(key)
-	if env == "" && len(fallback) > 0 {
-		return fallback[0], false
-	}
+	if env == "" {
+		if len(fallback) > 0 {
+			return fallback[0], false
+		}
 
+		return
+	}
 	switch any(value).(type) {
 	case string:
 		v, ok = any(env).(T)
@@ -47,7 +50,7 @@ func Get[T constraint](key string, fallback ...T) (value T, ok bool) {
 func MustGet[T constraint](key string) T {
 	env, ok := Get[T](key)
 	if !ok {
-		panic(fmt.Sprintf("env cannot be cast to type %T", env))
+		panic(fmt.Sprintf("env is not set or env cannot be cast to type %T", env))
 	}
 
 	return env
