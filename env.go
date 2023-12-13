@@ -1,6 +1,7 @@
 package env
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -10,47 +11,39 @@ type constraint interface {
 	string | int | float64 | bool
 }
 
-func Get[T constraint](key string, fallback ...T) (value T, ok bool) {
-	var (
-		v   any
-		err error
-	)
-
+func Get[T constraint](key string, fallback ...T) (value T, err error) {
 	env := os.Getenv(key)
 	if env == "" {
 		if len(fallback) > 0 {
-			return fallback[0], false
+			return fallback[0], nil
 		}
 
-		return
+		return value, errors.New("env not set")
 	}
 	switch any(value).(type) {
 	case string:
-		v, ok = any(env).(T)
+		value = any(env).(T)
 	case int:
+		var v any
 		v, err = strconv.Atoi(env)
-		if err == nil {
-			ok = true
-		}
+		value = v.(T)
 	case float64:
+		var v any
 		v, err = strconv.ParseFloat(env, 64)
-		if err == nil {
-			ok = true
-		}
+		value = v.(T)
 	case bool:
+		var v any
 		v, err = strconv.ParseBool(env)
-		if err == nil {
-			ok = true
-		}
+		value = v.(T)
 	}
 
-	return v.(T), ok
+	return
 }
 
-func MustGet[T constraint](key string) T {
-	env, ok := Get[T](key)
-	if !ok {
-		panic(fmt.Sprintf("env is not set or env cannot be cast to type %T", env))
+func MustGet[T constraint](key string) (env T) {
+	env, err := Get[T](key)
+	if err != nil {
+		panic(fmt.Errorf("env $%s error: %w", key, err))
 	}
 
 	return env
