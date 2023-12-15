@@ -1,6 +1,7 @@
 // Package env provides a simple and flexible way of interacting with ENVs directly from and to Go types.
 //
 // The flexibility of the package stems from the [encoding.TextMarshaler] and [encoding.TextUnmarshaler] interfaces, which allows ENVs to be parsed to non-native and user-defined types.
+//
 // [encoding.TextMarshaler]: https://pkg.go.dev/encoding#TextMarshaler
 // [encoding.TextUnmarshaler]: https://pkg.go.dev/encoding#TextUnmarshaler
 package env
@@ -16,10 +17,10 @@ import (
 var (
 	// ErrUnset represents a missing ENV.
 	ErrUnset error = errors.New("unset env")
-	// ErrUnmarshaler represents a failure parsing an existing ENV to the any type.
-	ErrUnmarshaler error = errors.New("type doesn't implement encoding.TextUnmarshaler")
 	// ErrMarshaler represents a failure parsing any type to a string ENV.
 	ErrMarshaler error = errors.New("type doesn't implement encoding.TextMarshaler")
+	// ErrUnmarshaler represents a failure parsing an existing ENV to the any type.
+	ErrUnmarshaler error = errors.New("type doesn't implement encoding.TextUnmarshaler")
 )
 
 // Get attempts to retrieve an ENV and parse it to the given type T.

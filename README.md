@@ -5,7 +5,7 @@
 # env
 A small and zero-dependency library for interacting with environment variables.
 
-`env` allows parsing environment values directly into `string`, `bool`, `int` and `float64` or user-defined types if they implement the [`encoding.TextUnmarshaler`](https://pkg.go.dev/encoding#TextUnmarshaler) interface.
+`env` allows parsing environment values directly from and into `string`, `bool`, `int`, `float64` and types that implement the [`encoding.TextMarshaler`](https://pkg.go.dev/encoding#TextMarshaler) and [`encoding.TextUnmarshaler`](https://pkg.go.dev/encoding#TextUnmarshaler) interfaces respectively.
 
 ## Example
 
