@@ -154,7 +154,7 @@ func TestMustGet(t *testing.T) {
 			}
 
 			defer func() {
-				if err := recover(); err != nil {
+				if err := recover(); err == env.ErrUnset {
 					be.Nonzero(t, err)
 				}
 			}()
@@ -172,12 +172,11 @@ type user struct {
 }
 
 func (u user) Build(env string) (any, error) {
-	var us user
-	if err := json.Unmarshal([]byte(env), &us); err != nil {
+	if err := json.Unmarshal([]byte(env), &u); err != nil {
 		return user{}, err
 	}
 
-	return us, nil
+	return u, nil
 }
 
 func (u *user) UnmarshalJSON(data []byte) error {
