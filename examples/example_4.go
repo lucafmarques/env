@@ -4,27 +4,28 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/lucafmarques/env"
 )
 
-type example struct {
-	A string
-	B string
+type log struct {
+	Format string
+	Prefix string
 }
 
-func (e *example) UnmarshalText(data []byte) error {
+func (e *log) UnmarshalText(data []byte) error {
 	v := bytes.Split(data, []byte(","))
 	if len(v) < 2 {
 		return errors.New("missing values in env")
 	}
-	e.A = string(v[0])
-	e.B = string(v[1])
+	e.Format = string(v[0])
+	e.Prefix = string(v[1])
+
 	return nil
 }
 
 func main() {
-	fmt.Println(env.MustGet[int]("INTEGER"))
-	fmt.Println(env.MustGet[string]("STRING"))
-	fmt.Println(env.MustGet[example]("LOG_FORMAT"))
+	fmt.Println(env.MustGet[int]("INTEGER"), env.MustGet[string]("STRING"), env.MustGet[log]("LOG_FORMAT"))
+	fmt.Println(env.Get[time.Time]("TIME"))
 }

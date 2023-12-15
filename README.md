@@ -2,8 +2,48 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/lucafmarques/env)](https://goreportcard.com/report/github.com/lucafmarques/env)
 
 # env
-A small, no dependency library for interacting with environment variables.
+A small and zero-dependency library for interacting with environment variables.
 
-`env` allows converting environment values directly into `string`, `bool`, `int` and `float64` types or convert them to user-defined types if they implement the `Builder` interface.
+`env` allows parsing environment values directly into `string`, `bool`, `int` and `float64` or user-defined types if they implement the [`encoding.TextUnmarshaler`](https://pkg.go.dev/encoding#TextUnmarshaler) interface.
 
-Examples can be found [here](/examples/) and [here](/env_test.go)
+## Example
+
+```go
+package main
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+
+	"github.com/lucafmarques/env"
+)
+
+type log struct {
+	Format string
+	Prefix string
+}
+
+func (e *log) UnmarshalText(data []byte) error {
+	v := bytes.Split(data, []byte(","))
+	if len(v) < 2 {
+		return errors.New("missing values in env")
+	}
+	e.Format = string(v[0])
+	e.Prefix = string(v[1])
+
+	return nil
+}
+
+func main() {
+	fmt.Println(env.MustGet[int]("INTEGER"), env.MustGet[string]("STRING"), env.MustGet[log]("LOG_FORMAT"))
+	fmt.Println(env.Get[time.Time]("TIME"))
+}
+```
+
+Running it:
+```sh
+$ INTEGER=10 STRING="this is an example" LOG_FORMAT="DEBUG,example" go run main.go
+10 this is an example {DEBUG example}
+0001-01-01 00:00:00 +0000 UTC unset env
+```
