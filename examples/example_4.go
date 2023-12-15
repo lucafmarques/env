@@ -14,6 +14,10 @@ type log struct {
 	Prefix string
 }
 
+func (e log) MarshalText() ([]byte, error) {
+	return []byte(fmt.Sprintf("%s,%s", e.Format, e.Prefix)), nil
+}
+
 func (e *log) UnmarshalText(data []byte) error {
 	v := bytes.Split(data, []byte(","))
 	if len(v) < 2 {
@@ -28,4 +32,6 @@ func (e *log) UnmarshalText(data []byte) error {
 func main() {
 	fmt.Println(env.MustGet[int]("INTEGER"), env.MustGet[string]("STRING"), env.MustGet[log]("LOG_FORMAT"))
 	fmt.Println(env.Get[time.Time]("TIME"))
+	env.MustSet("LOG_FORMAT", log{Format: "INFO", Prefix: "rewritten"})
+	fmt.Println(env.MustGet[log]("LOG_FORMAT"))
 }

@@ -1,6 +1,8 @@
-// Package env provides a simple and flexible way of fetching ENVs and parsing them to Go types.
+// Package env provides a simple and flexible way of interacting with ENVs directly from and to Go types.
 //
-// The flexibility of the package stems from the Builder interface, which allows ENVs to be parsed to user-defined types.
+// The flexibility of the package stems from the [encoding.TextMarshaler] and [encoding.TextUnmarshaler] interfaces, which allows ENVs to be parsed to non-native and user-defined types.
+// [encoding.TextMarshaler]: https://pkg.go.dev/encoding#TextMarshaler
+// [encoding.TextUnmarshaler]: https://pkg.go.dev/encoding#TextUnmarshaler
 package env
 
 import (
@@ -21,7 +23,6 @@ var (
 )
 
 // Get attempts to retrieve an ENV and parse it to the given type T.
-// Get can natively parse envs to the types string, bool, int, float64 and any type that implements `encoding.TextUnmarshaler`.
 func Get[T bool | string | int | float64 | any](key string, fallback ...T) (value T, err error) {
 	var fb T
 	if len(fallback) > 0 {
