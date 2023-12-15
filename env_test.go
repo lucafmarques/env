@@ -67,7 +67,7 @@ func TestGet(t *testing.T) {
 				key:      "TESTE_MISSING_BUILDER",
 				value:    `{"name":"Luca Marques","github":"https://github.com/lucafmarques"}`,
 				expected: fail{},
-				err:      env.ErrBuilder.Error(),
+				err:      env.ErrUnmarshalText.Error(),
 			},
 			{
 				key:      "TEST_UNSET",
@@ -171,15 +171,7 @@ type user struct {
 	Github url.URL `json:"github"`
 }
 
-func (u user) Build(env string) (any, error) {
-	if err := json.Unmarshal([]byte(env), &u); err != nil {
-		return user{}, err
-	}
-
-	return u, nil
-}
-
-func (u *user) UnmarshalJSON(data []byte) error {
+func (u *user) UnmarshalText(data []byte) error {
 	tmp := struct {
 		Github string `json:"github"`
 		Name   string `json:"name"`

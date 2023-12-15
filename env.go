@@ -4,31 +4,23 @@
 package env
 
 import (
+	"encoding"
 	"errors"
 	"fmt"
 	"os"
 	"strconv"
 )
 
-type constraint interface {
-	string | bool | int | float64
-}
-
-// Builder is an interface for a type that can be build itself from a string ENV.
-type Builder interface {
-	Build(env string) (any, error)
-}
-
 var (
 	// ErrUnset represents a missing ENV.
 	ErrUnset error = errors.New("unset env")
-	// ErrBuilder represents a failure converting an existing ENV to the specified special type.
-	ErrBuilder error = errors.New("type doesn't implement Builder")
+	// ErrUnmarshallText represents a failure converting an existing ENV to the specified special type.
+	ErrUnmarshalText error = errors.New("type doesn't implement encoding.TextUnmarshaler")
 )
 
 // Get attempts to retrieve an ENV and convert it to the specified type.
 // Get can natively convert envs to the types string, bool, int, float64 and any type that implements Builder.
-func Get[T constraint | any](key string, fallback ...T) (value T, err error) {
+func Get[T any](key string, fallback ...T) (value T, err error) {
 	var fb T
 	if len(fallback) > 0 {
 		fb = fallback[0]
@@ -44,24 +36,22 @@ func Get[T constraint | any](key string, fallback ...T) (value T, err error) {
 		return value, err
 	}
 
-	switch v := any(value).(type) {
-	case string:
+	switch v := any(&value).(type) {
+	case *string:
 		value = any(env).(T)
-	case bool:
-		v, err = strconv.ParseBool(env)
-		value = any(v).(T)
-	case int:
-		v, err = strconv.Atoi(env)
-		value = any(v).(T)
-	case float64:
-		v, err = strconv.ParseFloat(env, 64)
-		value = any(v).(T)
-	case Builder:
-		res, e := v.Build(env)
-		value = res.(T)
-		err = e
+	case *bool:
+		*v, err = strconv.ParseBool(env)
+		value = any(*v).(T)
+	case *int:
+		*v, err = strconv.Atoi(env)
+		value = any(*v).(T)
+	case *float64:
+		*v, err = strconv.ParseFloat(env, 64)
+		value = any(*v).(T)
+	case encoding.TextUnmarshaler:
+		err = v.UnmarshalText([]byte(env))
 	default:
-		err = ErrBuilder
+		err = ErrUnmarshalText
 	}
 
 	if err != nil {
@@ -72,7 +62,7 @@ func Get[T constraint | any](key string, fallback ...T) (value T, err error) {
 }
 
 // MustGet panics if Get fails.
-func MustGet[T constraint | any](key string) T {
+func MustGet[T any](key string) T {
 	env, err := Get[T](key)
 	if err != nil {
 		panic(fmt.Errorf("env $%s [%T]: %w", key, env, err))
