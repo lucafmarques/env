@@ -1,4 +1,5 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/lucafmarques/env.svg)](https://pkg.go.dev/github.com/lucafmarques/env)
+![Coverage](https://img.shields.io/badge/Coverage-100.0%25-brightgreen)
 [![Go Report Card](https://goreportcard.com/badge/github.com/lucafmarques/env)](https://goreportcard.com/report/github.com/lucafmarques/env)
 
 # env
@@ -15,6 +16,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/lucafmarques/env"
 )
@@ -22,6 +24,10 @@ import (
 type log struct {
 	Format string
 	Prefix string
+}
+
+func (e log) MarshalText() ([]byte, error) {
+	return []byte(fmt.Sprintf("%s,%s", e.Format, e.Prefix)), nil
 }
 
 func (e *log) UnmarshalText(data []byte) error {
@@ -38,6 +44,9 @@ func (e *log) UnmarshalText(data []byte) error {
 func main() {
 	fmt.Println(env.MustGet[int]("INTEGER"), env.MustGet[string]("STRING"), env.MustGet[log]("LOG_FORMAT"))
 	fmt.Println(env.Get[time.Time]("TIME"))
+
+	env.MustSet("LOG_FORMAT", log{Format: "INFO", Prefix: "rewritten"})
+	fmt.Println(env.MustGet[log]("LOG_FORMAT"))
 }
 ```
 
@@ -46,4 +55,7 @@ Running it:
 $ INTEGER=10 STRING="this is an example" LOG_FORMAT="DEBUG,example" go run main.go
 10 this is an example {DEBUG example}
 0001-01-01 00:00:00 +0000 UTC unset env
+{INFO rewritten}
+$ env | grep LOG_FORMAT
+LOG_FORMAT=INFO,rewritten
 ```
