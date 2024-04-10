@@ -260,12 +260,12 @@ func TestMustSet(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.key, func(t *testing.T) {
 			defer func() {
-			}()
-
-			defer func() {
 				err, ok := recover().(error)
 				if ok {
 					be.Equal(t, tc.err, err)
+				} else {
+					val := os.Getenv(tc.key)
+					be.Equal(t, tc.expected, val)
 				}
 			}()
 
