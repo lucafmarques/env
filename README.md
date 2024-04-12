@@ -1,7 +1,6 @@
 # `env`: read and write envs with generics
-![Coverage](https://img.shields.io/badge/Coverage-43.4%25-yellow)
+![Coverage](https://img.shields.io/badge/coverage-43.4%25-yellow)
 [![Go Reference](https://pkg.go.dev/badge/github.com/lucafmarques/env.svg)](https://pkg.go.dev/github.com/lucafmarques/env)
-![Coverage](https://img.shields.io/badge/coverage-100.0%25-brightgreen)
 [![Go Report Card](https://goreportcard.com/badge/github.com/lucafmarques/env)](https://goreportcard.com/report/github.com/lucafmarques/env)
 
 `env` allows parsing environment values directly from and into `string`, `bool`, `int`, `float64` and any type that implement the [`encoding.TextMarshaler`](https://pkg.go.dev/encoding#TextMarshaler) and/or [`encoding.TextUnmarshaler`](https://pkg.go.dev/encoding#TextUnmarshaler) interfaces.
