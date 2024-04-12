@@ -3,57 +3,91 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/lucafmarques/env.svg)](https://pkg.go.dev/github.com/lucafmarques/env)
 [![Go Report Card](https://goreportcard.com/badge/github.com/lucafmarques/env)](https://goreportcard.com/report/github.com/lucafmarques/env)
 
-`env` allows parsing environment values directly from and into `string`, `bool`, `int`, `float64` and any type that implement the [`encoding.TextMarshaler`](https://pkg.go.dev/encoding#TextMarshaler) and/or [`encoding.TextUnmarshaler`](https://pkg.go.dev/encoding#TextUnmarshaler) interfaces.
+`env` allows parsing environment values directly to and from native Go types and any custom types that implement the `encoding.TextUnmarshaler` and/or `encoding.TextMarshaler` interfaces.
 
-## Example
+```
+go get github.com/lucafmarques/env
+```
+
+`env` works with the following native types out of the box:
+- `bool`
+- `string` 
+- `int`, variants and aliases
+- `uint`, variants and aliases
+- `float32` and `float64`
+- `complex64` and `complex128`
+- `[]T` where `T` is any of the above types
+- `encoding.TextUnmarshaler`
+
+Custom types must implement [`encoding.TextUnmarshaler`](https://pkg.go.dev/encoding#TextUnmarshaler) and/or [`encoding.TextMarshaler`](https://pkg.go.dev/encoding#TextMarshaler) to work with `env`.
+
+## Examples
+<table>
+<tr>
+<th><code>native.go</code></th>
+<th><code>custom.go</code></th>
+</tr>
+<tr>
+<td>
+  
+```go
+package main
+
+import (
+    "time"
+
+    "github.com/lucafmarques/env"
+)
+
+func main() {
+    // MustGet panics if the env isn't set
+    intV := env.MustGet[int]("INTEGER")
+    strV := env.MustGet[string]("STRING")
+    timeV, err := env.Get[time.Time]("TIME")
+    // ...
+    env.MustSet("COMPLEX", complex128(420))
+    err = env.Set("UINT32", uint32(69))
+}
+```
+</td>
+<td>
 
 ```go
 package main
 
 import (
-	"bytes"
-	"errors"
-	"fmt"
-	"time"
+    "bytes"
+    "fmt"
 
-	"github.com/lucafmarques/env"
+    "github.com/lucafmarques/env"
 )
 
 type log struct {
-	Format string
-	Prefix string
+    Format string
+    Level string
 }
 
-func (e log) MarshalText() ([]byte, error) {
-	return []byte(fmt.Sprintf("%s,%s", e.Format, e.Prefix)), nil
+func (l log) MarshalText() ([]byte, error) {
+    s := fmt.Sprintf("%s,%s", e.Format, e.Level) 
+    return []byte(s), nil
 }
 
-func (e *log) UnmarshalText(data []byte) error {
-	v := bytes.Split(data, []byte(","))
-	if len(v) < 2 {
-		return errors.New("missing values in env")
-	}
-	e.Format = string(v[0])
-	e.Prefix = string(v[1])
-
-	return nil
+func (l *log) UnmarshalText(d []byte) error {
+    v := bytes.Split(d, []byte(","))
+    if len(v) != 2 {
+        return fmt.Errorf("can't unrmarshal")
+    }
+    l.Format = string(v[0])
+    l.Level = string(v[1])
+    return nil
 }
 
 func main() {
-	fmt.Println(env.MustGet[int]("INTEGER"), env.MustGet[string]("STRING"), env.MustGet[log]("LOG_FORMAT"))
-	fmt.Println(env.Get[time.Time]("TIME"))
-
-	env.MustSet("LOG_FORMAT", log{Format: "INFO", Prefix: "rewritten"})
-	fmt.Println(env.MustGet[log]("LOG_FORMAT"))
+    logV := env.MustGet[log]("LOG_FORMAT"))
+    logV = log{Format: "JSON", Level: "INFO"}
+    err := env.Set("LOG_FORMAT", logV)	
 }
 ```
-
-Running it:
-```sh
-$ INTEGER=10 STRING="this is an example" LOG_FORMAT="DEBUG,example" go run main.go
-10 this is an example {DEBUG example}
-0001-01-01 00:00:00 +0000 UTC unset env
-{INFO rewritten}
-$ env | grep LOG_FORMAT
-LOG_FORMAT=INFO,rewritten
-```
+</td>
+</tr>
+</table>
