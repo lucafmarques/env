@@ -35,22 +35,22 @@ func Get[T any](key string, fallback ...T) (value T, err error) {
 
 	env, ok := os.LookupEnv(key)
 	if !ok {
-		return fb, ErrUnset
+		return fb, fmt.Errorf("%w: %v", ErrUnset, key)
 	}
 
 	value, err = parse(env, value)
 	if err != nil {
-		value = fb
+		return fb, fmt.Errorf("%w: %v", err, key)
 	}
 
-	return value, err
+	return value, nil
 }
 
 // MustGet panics if Get errors.
 func MustGet[T any](key string) T {
 	env, err := Get[T](key)
 	if err != nil {
-		panic(fmt.Errorf("env $%s [%T]: %w", key, env, err))
+		panic(err)
 	}
 
 	return env
