@@ -14,118 +14,570 @@ import (
 	"github.com/lucafmarques/env"
 )
 
-var Error = errors.New("mock test error")
+var (
+	Error      = errors.New("mock test error")
+	TestURL, _ = url.Parse("https://github.com/lucafmarques")
+)
 
-func TestGet(t *testing.T) {
-	testurl, _ := url.Parse("https://github.com/lucafmarques")
-	tt := []struct {
-		key      string
-		value    string
-		expected any
-		err      string
-		fallback any
-	}{
-		{
-			key:      "TESTE_STRING",
-			value:    "string value",
-			expected: "string value",
-		},
-		{
-			key:      "TESTE_STRING_FALLBACK",
-			expected: "fallback",
-			fallback: "fallback",
-			err:      env.ErrUnset.Error(),
-		},
-		{
-			key:      "TESTE_BOOL",
-			value:    "TRUE",
-			expected: true,
-		},
-		{
-			key:      "TESTE_BOOL_PARSE_ERROR",
-			value:    "truthy",
-			expected: false,
-			err:      (&strconv.NumError{Func: "ParseBool", Num: "truthy", Err: strconv.ErrSyntax}).Error(),
-		},
-		{
-			key:      "TESTE_INT",
-			value:    "10",
-			expected: 10,
-		},
-		{
-			key:      "TESTE_INT_PARSE_ERROR",
-			value:    "10.0",
-			expected: 0,
-			err:      (&strconv.NumError{Func: "Atoi", Num: "10.0", Err: strconv.ErrSyntax}).Error(),
-		},
-		{
-			key:      "TESTE_FLOAT64",
-			value:    "10",
-			expected: 10.,
-		},
-		{
-			key:      "TESTE_FLOAT64_PARSE_ERROR",
-			value:    "R$ 4.20",
-			expected: 0.,
-			err:      (&strconv.NumError{Func: "ParseFloat", Num: "R$ 4.20", Err: strconv.ErrSyntax}).Error(),
-		},
-		{
-			key:      "TESTE_CUSTOM_TEXT_UNMARSHALER",
-			value:    `{"name":"Luca Marques","github":"https://github.com/lucafmarques"}`,
-			expected: user{Name: "Luca Marques", Github: *testurl},
-		},
-		{
-			key:      "TESTE_UNIMPLEMENTED_TEXT_UNMARSHALER",
-			value:    `{"name":"Luca Marques","github":"https://github.com/lucafmarques"}`,
-			expected: fail{},
-			err:      env.ErrUnmarshaler.Error(),
-		},
-		{
-			key:      "TEST_UNSET",
-			value:    "",
-			expected: "",
-			err:      env.ErrUnset.Error(),
-		},
+type test[T any] struct {
+	key      string
+	env      string
+	err      error
+	want     T
+	fallback T
+}
+
+func (t test[T]) Error() string {
+	if t.err != nil {
+		return fmt.Errorf("%w: %s", t.err, t.key).Error()
 	}
 
-	for _, tc := range tt {
+	return ""
+}
+
+var TestGetTable = []func(t *testing.T){
+	func(t *testing.T) {
+		tc := test[bool]{
+			key: "CONVERSION_ERROR",
+			env: "truth",
+			err: &strconv.NumError{Func: "ParseBool", Num: "truth", Err: strconv.ErrSyntax},
+		}
+
 		t.Run(tc.key, func(t *testing.T) {
-			var (
-				res any
-				err error
-			)
+			t.Setenv(tc.key, tc.env)
 
-			if tc.value != "" {
-				if err := os.Setenv(tc.key, tc.value); err != nil {
-					t.Fatal(err)
-				}
-			}
-			defer os.Unsetenv(tc.key)
-
-			switch tc.expected.(type) {
-			case string:
-				if s, ok := tc.fallback.(string); !ok {
-					res, err = env.Get[string](tc.key)
-				} else {
-					res, err = env.Get[string](tc.key, s)
-				}
-			case bool:
-				res, err = env.Get[bool](tc.key)
-			case int:
-				res, err = env.Get[int](tc.key)
-			case float64:
-				res, err = env.Get[float64](tc.key)
-			case user:
-				res, err = env.Get[user](tc.key)
-			case fail:
-				res, err = env.Get[fail](tc.key)
-			}
-
-			if err != nil {
-				be.Equal(t, tc.err, err.Error())
-			}
-			be.Equal(t, tc.expected, res)
+			val, err := env.Get[bool](tc.key)
+			be.Equal(t, tc.want, val)
+			be.Equal(t, tc.Error(), err.Error())
 		})
+	},
+	func(t *testing.T) {
+		tc := test[bool]{
+			key:  "UNSET",
+			env:  "true",
+			want: true,
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[bool](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[string]{
+			key:  "STRING",
+			env:  "text",
+			want: "text",
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[string](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[int]{
+			key:  "INT",
+			env:  "10",
+			want: 10,
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[int](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[int8]{
+			key:  "INT8",
+			env:  "10",
+			want: 10,
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[int8](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[int16]{
+			key:  "INT16",
+			env:  "10",
+			want: 10,
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[int16](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[int32]{
+			key:  "INT32",
+			env:  "10",
+			want: 10,
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[int32](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[int64]{
+			key:  "INT64",
+			env:  "10",
+			want: 10,
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[int64](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[uint]{
+			key:  "UINT",
+			env:  "10",
+			want: 10,
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[uint](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[uint8]{
+			key:  "UINT8",
+			env:  "10",
+			want: 10,
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[uint8](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[uint16]{
+			key:  "UINT16",
+			env:  "10",
+			want: 10,
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[uint16](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[uint32]{
+			key:  "UINT32",
+			env:  "10",
+			want: 10,
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[uint32](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[uint64]{
+			key:  "UINT64",
+			env:  "10",
+			want: 10,
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[uint64](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[float32]{
+			key:  "FLOAT32",
+			env:  "10.0",
+			want: 10.0,
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[float32](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[float64]{
+			key:  "FLOAT64",
+			env:  "10.0",
+			want: 10.0,
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[float64](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[complex64]{
+			key:  "COMPLEX64",
+			env:  "420+69i",
+			want: complex64(complex(420, 69)),
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[complex64](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[complex128]{
+			key:  "COMPLEX128",
+			env:  "420+69i",
+			want: complex(420, 69),
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[complex128](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]bool]{
+			key:  "BOOL_SLICE",
+			env:  "true,false",
+			want: []bool{true, false},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]bool](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]string]{
+			key:  "STRING_SLICE",
+			env:  "split,text",
+			want: []string{"split", "text"},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]string](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]int]{
+			key:  "INT_SLICE",
+			env:  "420,69",
+			want: []int{420, 69},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]int](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]int8]{
+			key:  "INT8_SLICE",
+			env:  "127,69",
+			want: []int8{127, 69},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]int8](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]int16]{
+			key:  "INT16_SLICE",
+			env:  "420,69",
+			want: []int16{420, 69},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]int16](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]int32]{
+			key:  "INT32_SLICE",
+			env:  "420,69",
+			want: []int32{420, 69},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]int32](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]int64]{
+			key:  "INT64_SLICE",
+			env:  "420,69",
+			want: []int64{420, 69},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]int64](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]uint]{
+			key:  "UINT_SLICE",
+			env:  "420,69",
+			want: []uint{420, 69},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]uint](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]uint8]{
+			key:  "UINT8_SLICE",
+			env:  "255,69",
+			want: []uint8{255, 69},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]uint8](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]uint16]{
+			key:  "UINT16_SLICE",
+			env:  "420,69",
+			want: []uint16{420, 69},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]uint16](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]uint32]{
+			key:  "UINT32_SLICE",
+			env:  "420,69",
+			want: []uint32{420, 69},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]uint32](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]uint64]{
+			key:  "UINT64_SLICE",
+			env:  "420,69",
+			want: []uint64{420, 69},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]uint64](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]float32]{
+			key:  "FLOAT32_SLICE",
+			env:  "420.0,69.",
+			want: []float32{420.0, 69.},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]float32](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]float64]{
+			key:  "FLOAT64_SLICE",
+			env:  "420.0,69.",
+			want: []float64{420.0, 69.},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]float64](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]complex64]{
+			key:  "COMPLEX64_SLICE",
+			env:  "420+69i,69+420i",
+			want: []complex64{complex64(complex(420, 69)), complex64(complex(69, 420))},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]complex64](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[[]complex128]{
+			key:  "COMPLEX128_SLICE",
+			env:  "420+69i,69+420i",
+			want: []complex128{complex(420, 69), complex(69, 420)},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[[]complex128](tc.key)
+			be.AllEqual(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[string]{
+			key:      "FALLBACK",
+			fallback: "fallback",
+			err:      env.ErrUnset,
+		}
+
+		val, err := env.Get(tc.key, tc.fallback)
+		be.Equal(t, tc.fallback, val)
+		be.Equal(t, tc.Error(), err.Error())
+	},
+	func(t *testing.T) {
+		tc := test[user]{
+			key:  "CUSTOM_TEXT_UNMARSHALER",
+			env:  `{"name":"Luca Marques","github":"https://github.com/lucafmarques"}`,
+			want: user{Name: "Luca Marques", Github: *TestURL},
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[user](tc.key)
+			be.Equal(t, tc.want, val)
+			be.NilErr(t, err)
+		})
+	},
+	func(t *testing.T) {
+		tc := test[fail]{
+			key:  "UNIMPLEMENTED_TEXT_UNMARSHALER",
+			env:  `{"name":"Luca Marques","github":"https://github.com/lucafmarques"}`,
+			want: fail{},
+			err:  env.ErrUnmarshaler,
+		}
+
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, tc.env)
+
+			val, err := env.Get[fail](tc.key)
+			be.Equal(t, tc.want, val)
+			be.Equal(t, tc.Error(), err.Error())
+		})
+	},
+}
+
+func TestGet(t *testing.T) {
+	for _, tc := range TestGetTable {
+		tc(t)
 	}
 }
 
@@ -237,6 +689,7 @@ func TestSet(t *testing.T) {
 		})
 	}
 }
+
 func TestMustSet(t *testing.T) {
 	tt := []struct {
 		key      string
