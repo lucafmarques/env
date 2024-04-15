@@ -1,6 +1,5 @@
 # `env`: read and write envs with generics
-![Coverage](https://img.shields.io/badge/Coverage-100.0%25-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-43.4%25-yellow)
+![coverage](https://img.shields.io/badge/coverage-100.0%25-brightgreen)
 [![Go Reference](https://pkg.go.dev/badge/github.com/lucafmarques/env.svg)](https://pkg.go.dev/github.com/lucafmarques/env)
 [![Go Report Card](https://goreportcard.com/badge/github.com/lucafmarques/env)](https://goreportcard.com/report/github.com/lucafmarques/env)
 
